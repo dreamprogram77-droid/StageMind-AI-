@@ -102,7 +102,8 @@ import {
   MapPin,
   ExternalLink,
   UserCheck,
-  Save
+  Save,
+  RotateCcw as ResetIcon
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -313,7 +314,10 @@ const DEFAULT_LAYOUT = {
     { i: 'kpi-security', x: 9, y: 4, w: 3, h: 4 },
     { i: 'occupancy-heatmap', x: 0, y: 8, w: 8, h: 10 },
     { i: 'seat-density', x: 8, y: 8, w: 4, h: 5 },
-    { i: 'main-charts', x: 8, y: 13, w: 4, h: 5 }
+    { i: 'main-charts', x: 8, y: 13, w: 4, h: 5 },
+    { i: 'ai-advisor-mini', x: 8, y: 18, w: 4, h: 3 },
+    { i: 'system-logs', x: 0, y: 18, w: 4, h: 4 },
+    { i: 'kpi-attendance', x: 4, y: 18, w: 4, h: 4 }
   ],
   md: [
     { i: 'conductor', x: 0, y: 0, w: 10, h: 4 },
@@ -345,6 +349,47 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
   const [hoveredSeat, setHoveredSeat] = useState<HoveredSeatInfo | null>(null);
   const [isAddWidgetOpen, setIsAddWidgetOpen] = useState(false);
   const [liveSimulationOffset, setLiveSimulationOffset] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
+  const dashboardContainerRef = useRef<HTMLDivElement>(null);
+
+  const { addToast } = useToast();
+
+  // Parallax Scroll Listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (dashboardContainerRef.current) {
+        setScrollTop(dashboardContainerRef.current.scrollTop);
+      }
+    };
+    const el = dashboardContainerRef.current;
+    el?.addEventListener('scroll', handleScroll);
+    return () => el?.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Load from LocalStorage or use defaults
+  const [activeWidgets, setActiveWidgets] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('stagemind_active_widgets');
+      return saved ? JSON.parse(saved) : DEFAULT_ACTIVE_WIDGETS;
+    } catch (e) {
+      return DEFAULT_ACTIVE_WIDGETS;
+    }
+  });
+
+  const [currentLayout, setCurrentLayout] = useState(() => {
+    try {
+      const saved = localStorage.getItem('stagemind_dashboard_layout');
+      return saved ? JSON.parse(saved) : DEFAULT_LAYOUT;
+    } catch (e) {
+      return DEFAULT_LAYOUT;
+    }
+  });
+
+  // Persist state changes to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('stagemind_dashboard_layout', JSON.stringify(currentLayout));
+    localStorage.setItem('stagemind_active_widgets', JSON.stringify(activeWidgets));
+  }, [currentLayout, activeWidgets]);
 
   // States for Editing Form
   const [editStatus, setEditStatus] = useState<SeatData['status']>('available');
@@ -402,16 +447,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
     return () => clearInterval(interval);
   }, [viewMode]);
 
-  const [activeWidgets, setActiveWidgets] = useState<string[]>(() => {
-    const saved = localStorage.getItem('stagemind_active_widgets');
-    return saved ? JSON.parse(saved) : DEFAULT_ACTIVE_WIDGETS;
-  });
-
-  const [currentLayout, setCurrentLayout] = useState(() => {
-    const saved = localStorage.getItem('stagemind_dashboard_layout');
-    return saved ? JSON.parse(saved) : DEFAULT_LAYOUT;
-  });
-
   const [isDynamicPricingActive, setIsDynamicPricingActive] = useState(false);
   const [isActivatingPricing, setIsActivatingPricing] = useState(false);
 
@@ -420,13 +455,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
     { id: 1, title: 'تحذير تدفق', message: 'ارتفاع مفاجئ في كثافة الجمهور عند البوابة 4.', time: 'منذ دقيقتين', type: 'surge', isRead: false },
     { id: 2, title: 'تنبيه مبيعات', message: 'معدل حجز عرض "أوبرا عايدة" أقل من المتوقع بنسبة 12%.', time: 'منذ ساعة', type: 'sales', isRead: true },
   ]);
-
-  const { addToast } = useToast();
-
-  useEffect(() => {
-    localStorage.setItem('stagemind_dashboard_layout', JSON.stringify(currentLayout));
-    localStorage.setItem('stagemind_active_widgets', JSON.stringify(activeWidgets));
-  }, [currentLayout, activeWidgets]);
 
   const handleToggleDynamicPricing = async () => {
     if (isDynamicPricingActive) {
@@ -601,7 +629,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
 
   const handleToggleEditMode = () => {
     setIsEditMode(!isEditMode);
-    addToast(isEditMode ? 'تم حفظ التعديلات في النظام.' : 'وضع التخصيص نشط الآن. يمكنك سحب، تغيير حجم، أو حذف الودجات.', isEditMode ? 'success' : 'info');
+    addToast(isEditMode ? 'وضع التخصيص نشط الآن. يمكنك سحب، تغيير حجم، أو حذف الودجات.' : 'تم حفظ التعديلات في النظام.', isEditMode ? 'info' : 'success');
+  };
+
+  const handleResetLayout = () => {
+    if (window.confirm('هل أنت متأكد من رغبتك في إعادة تعيين واجهة التحكم إلى الإعدادات الافتراضية؟ ستفقد جميع التخصيصات الحالية.')) {
+      setActiveWidgets(DEFAULT_ACTIVE_WIDGETS);
+      setCurrentLayout(DEFAULT_LAYOUT);
+      localStorage.removeItem('stagemind_dashboard_layout');
+      localStorage.removeItem('stagemind_active_widgets');
+      addToast('تمت إعادة تعيين واجهة التحكم للإعدادات الافتراضية.', 'info');
+    }
   };
 
   const handleRemoveWidget = (id: string) => {
@@ -915,6 +953,18 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
             return (
               <div key="main-charts">
                 <div className={`glass-card p-6 md:p-10 rounded-[56px] border border-white/5 shadow-3xl text-right relative overflow-hidden h-full ${isEditMode ? 'border-dashed border-white/20' : ''}`}>
+                  {/* Subtle Parallax Background Blobs */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+                    <div 
+                      className="absolute top-[-10%] right-[-10%] w-[300px] h-[300px] bg-electric-teal/5 rounded-full blur-[80px] transition-transform duration-200 ease-out" 
+                      style={{ transform: `translateY(${scrollTop * 0.08}px) scale(${1 + Math.sin(scrollTop/1000) * 0.1})` }}
+                    />
+                    <div 
+                      className="absolute bottom-[-10%] left-[-10%] w-[250px] h-[250px] bg-amber-gold/5 rounded-full blur-[70px] transition-transform duration-300 ease-out" 
+                      style={{ transform: `translateY(${scrollTop * -0.04}px)` }}
+                    />
+                  </div>
+                  
                   {isEditMode && (
                     <>
                       <div className="absolute top-6 left-6 p-2 bg-white/10 rounded-full cursor-grab active:cursor-grabbing z-20">
@@ -935,7 +985,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
                     </div>
                     <h3 className="text-xl font-black text-white font-plex tracking-tight">لوحة المؤشرات التشغيلية</h3>
                   </div>
-                  <div className="h-full max-h-[calc(100%-80px)] overflow-hidden">
+                  <div className="h-full max-h-[calc(100%-80px)] overflow-hidden relative z-10">
                     <DashboardPreview isLive={viewMode === 'live'} />
                   </div>
                 </div>
@@ -1003,7 +1053,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12 xl:p-16 space-y-12 relative z-10">
+        <div 
+          ref={dashboardContainerRef}
+          className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12 xl:p-16 space-y-12 relative z-10"
+        >
           <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 border-b border-white/5 pb-12">
              <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
                {/* Quick Access Toggle View Mode */}
@@ -1026,7 +1079,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
 
                <div className="h-8 w-px bg-white/10 hidden sm:block mx-2" />
 
-               <div className="relative">
+               <div className="flex items-center gap-2">
                 <button 
                   onClick={handleToggleEditMode}
                   className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl font-black text-sm transition-all border ${isEditMode ? 'bg-electric-teal text-[#0A192F] border-electric-teal shadow-xl' : 'bg-white/5 text-white border-white/10 hover:bg-white/10'}`}
@@ -1034,6 +1087,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
                   {isEditMode ? <CheckCircle2 className="w-5 h-5" /> : <Settings2 className="w-5 h-5" />}
                   <span>{isEditMode ? 'حفظ التخطيط' : 'تخصيص اللوحة'}</span>
                 </button>
+                
+                {isEditMode && (
+                  <button 
+                    onClick={handleResetLayout}
+                    title="إعادة ضبط الواجهة للافتراضي"
+                    className="flex items-center justify-center p-3.5 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-xl active:scale-95"
+                  >
+                    <ResetIcon className="w-5 h-5" />
+                  </button>
+                )}
                </div>
 
                {isEditMode && (

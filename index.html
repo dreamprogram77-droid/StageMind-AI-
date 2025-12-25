@@ -5,7 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StageMind AI | تشغيل ذكي للمسرح</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&family=IBM+Plex+Arabic:wght@100;200;300;400;500;600;700&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
@@ -23,7 +22,6 @@
     }
 
     body {
-      font-family: 'Cairo', sans-serif;
       background-color: var(--midnight);
       color: #E2E8F0;
       scroll-behavior: smooth;
@@ -32,24 +30,7 @@
       line-height: 1.6;
     }
 
-    .font-plex {
-      font-family: 'IBM Plex Arabic', sans-serif;
-    }
-
-    .font-amiri {
-      font-family: 'Amiri', serif;
-    }
-    
-    .text-electric-teal { color: var(--teal); }
-    .bg-electric-teal { background-color: var(--teal); }
-    .border-electric-teal { border-color: var(--teal); }
-    .text-amber-gold { color: var(--gold); }
-    .bg-amber-gold { background-color: var(--gold); }
-    
-    /* Advanced Glows & Glassmorphism */
-    .glow-teal { filter: drop-shadow(0 0 15px rgba(100, 255, 218, 0.3)); }
-    .glow-gold { filter: drop-shadow(0 0 15px rgba(255, 180, 0, 0.3)); }
-    
+    /* CSS Utility Classes that Tailwind doesn't cover by default */
     .glass-card {
       background: rgba(30, 41, 59, 0.4);
       backdrop-filter: blur(20px);
@@ -83,20 +64,12 @@
       z-index: 3;
       will-change: transform;
     }
-    .react-grid-item.dropping {
-      visibility: hidden;
-    }
     .react-grid-placeholder {
       background: rgba(100, 255, 218, 0.05);
       border-radius: 40px;
       border: 2px dashed rgba(100, 255, 218, 0.2);
       transition-duration: 100ms;
       z-index: 2;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      -o-user-select: none;
-      user-select: none;
     }
     .react-resizable-handle {
       position: absolute;
@@ -118,13 +91,6 @@
       border-bottom: 2px solid rgba(255, 255, 255, 0.4);
     }
 
-    /* Custom Selection */
-    ::selection {
-      background: rgba(100, 255, 218, 0.3);
-      color: #fff;
-    }
-
-    /* Animations */
     @keyframes subtle-pulse {
       0%, 100% { opacity: 0.5; transform: scale(1); }
       50% { opacity: 0.8; transform: scale(1.05); }
@@ -145,33 +111,25 @@
       background: rgba(255, 255, 255, 0.05);
       border-radius: 10px;
     }
-
-    /* Input focus styles */
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      box-shadow: 0 0 0 4px rgba(100, 255, 218, 0.05);
-    }
-
-    /* RTL specific adjustments */
-    [dir="rtl"] .perspective-1000 {
-      perspective: 1000px;
-    }
   </style>
 <script type="importmap">
 {
   "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "recharts": "https://esm.sh/recharts@^3.6.0",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "react-grid-layout": "https://esm.sh/react-grid-layout@^1.5.0"
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "react-grid-layout": "https://esm.sh/react-grid-layout@^2.1.1"
   }
 }
 </script>
 </head>
 <body>
   <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
 </body>
 </html>
