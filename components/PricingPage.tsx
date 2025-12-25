@@ -93,58 +93,68 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBookDemo }) => {
 
           {/* Plan Cards Grid */}
           <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-6 text-right max-w-[1400px] mx-auto mb-32">
-            {plans.map((p, i) => (
-              <div 
-                key={i} 
-                className={`group relative glass-card p-10 rounded-[40px] border-2 ${p.color} flex flex-col h-full transition-all duration-500 hover:-translate-y-4`}
-              >
-                {p.popular && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-electric-teal to-blue-500 text-[#0A192F] px-8 py-2 rounded-full font-black text-xs uppercase tracking-widest shadow-xl">الخيار الموصى به</div>
-                )}
-                
-                <div className="flex items-center justify-between mb-10">
-                  <div className={`p-4 rounded-2xl bg-slate-800 transition-colors group-hover:bg-slate-700 ${p.popular ? 'text-electric-teal' : 'text-white'}`}>{p.icon}</div>
-                  <h3 className="text-2xl font-black">{p.name}</h3>
-                </div>
-
-                <div className="mb-8 min-h-[80px] flex flex-col items-end">
-                  <div className="flex items-baseline gap-2 flex-row-reverse">
-                    <span className="text-5xl font-black text-white transition-all duration-500">
-                      {typeof p.monthlyPrice === 'string' 
-                        ? p.monthlyPrice 
-                        : isAnnual ? `$${p.annualPrice}` : `$${p.monthlyPrice}`
-                      }
-                    </span>
-                    {typeof p.monthlyPrice !== 'string' && (
-                      <span className="text-gray-500 font-bold text-sm">/ شهرياً</span>
-                    )}
-                  </div>
-                  {isAnnual && typeof p.monthlyPrice !== 'string' && p.monthlyPrice > 0 && (
-                    <p className="text-[10px] text-electric-teal font-black mt-2 uppercase tracking-widest">تُدفع سنوياً ($ {(p.annualPrice as number) * 12})</p>
+            {plans.map((p, i) => {
+              const isEnterprise = p.name === "المؤسسات";
+              
+              return (
+                <div key={i} className="relative h-full group">
+                  {/* Subtle animated gradient border for Enterprise */}
+                  {isEnterprise && (
+                    <div className="absolute -inset-[2px] rounded-[42px] bg-gradient-to-r from-amber-gold via-indigo-500 to-amber-gold bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite] opacity-60 group-hover:opacity-100 transition-opacity blur-[1px]" />
                   )}
-                </div>
-
-                <p className="text-sm text-gray-400 mb-10 leading-relaxed min-h-[60px]">{p.desc}</p>
-
-                <div className="space-y-4 mb-12 flex-1 border-t border-white/5 pt-8">
-                  {p.features.map((f, idx) => (
-                    <div key={idx} className="flex items-center gap-4 flex-row-reverse">
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${p.popular ? 'bg-electric-teal/20 text-electric-teal' : 'bg-slate-800 text-gray-500'}`}>
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                      <span className="text-sm font-bold text-gray-300">{f}</span>
+                  
+                  <div 
+                    className={`relative glass-card p-10 rounded-[40px] border-2 ${p.color} flex flex-col h-full transition-all duration-500 hover:-translate-y-4 ${isEnterprise ? 'bg-[#0A192F]/90' : ''}`}
+                  >
+                    {p.popular && (
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-electric-teal to-blue-500 text-[#0A192F] px-8 py-2 rounded-full font-black text-xs uppercase tracking-widest shadow-xl">الخيار الموصى به</div>
+                    )}
+                    
+                    <div className="flex items-center justify-between mb-10">
+                      <div className={`p-4 rounded-2xl bg-slate-800 transition-colors group-hover:bg-slate-700 ${p.popular ? 'text-electric-teal' : isEnterprise ? 'text-amber-gold' : 'text-white'}`}>{p.icon}</div>
+                      <h3 className="text-2xl font-black">{p.name}</h3>
                     </div>
-                  ))}
-                </div>
 
-                <button 
-                  onClick={onBookDemo}
-                  className={`w-full py-5 rounded-2xl font-black text-sm transition-all active:scale-[0.98] ${p.popular ? 'bg-electric-teal text-[#0A192F] hover:shadow-[0_20px_40px_rgba(100,255,218,0.2)]' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
-                >
-                  {p.name === "المؤسسات" ? "اتصل بفريق المبيعات" : p.name === "المجاني" ? "ابدأ الآن مجاناً" : "ابدأ الفترة التجريبية"}
-                </button>
-              </div>
-            ))}
+                    <div className="mb-8 min-h-[80px] flex flex-col items-end">
+                      <div className="flex items-baseline gap-2 flex-row-reverse">
+                        <span className="text-5xl font-black text-white transition-all duration-500">
+                          {typeof p.monthlyPrice === 'string' 
+                            ? p.monthlyPrice 
+                            : isAnnual ? `$${p.annualPrice}` : `$${p.monthlyPrice}`
+                          }
+                        </span>
+                        {typeof p.monthlyPrice !== 'string' && (
+                          <span className="text-gray-500 font-bold text-sm">/ شهرياً</span>
+                        )}
+                      </div>
+                      {isAnnual && typeof p.monthlyPrice !== 'string' && p.monthlyPrice > 0 && (
+                        <p className="text-[10px] text-electric-teal font-black mt-2 uppercase tracking-widest">تُدفع سنوياً ($ {(p.annualPrice as number) * 12})</p>
+                      )}
+                    </div>
+
+                    <p className="text-sm text-gray-400 mb-10 leading-relaxed min-h-[60px]">{p.desc}</p>
+
+                    <div className="space-y-4 mb-12 flex-1 border-t border-white/5 pt-8">
+                      {p.features.map((f, idx) => (
+                        <div key={idx} className="flex items-center gap-4 flex-row-reverse">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${p.popular ? 'bg-electric-teal/20 text-electric-teal' : isEnterprise ? 'bg-amber-gold/20 text-amber-gold' : 'bg-slate-800 text-gray-500'}`}>
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </div>
+                          <span className="text-sm font-bold text-gray-300">{f}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button 
+                      onClick={onBookDemo}
+                      className={`w-full py-5 rounded-2xl font-black text-sm transition-all active:scale-[0.98] ${p.popular ? 'bg-electric-teal text-[#0A192F] hover:shadow-[0_20px_40px_rgba(100,255,218,0.2)]' : isEnterprise ? 'bg-amber-gold text-[#0A192F] hover:shadow-[0_20px_40px_rgba(255,180,0,0.2)]' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
+                    >
+                      {p.name === "المؤسسات" ? "اتصل بفريق المبيعات" : p.name === "المجاني" ? "ابدأ الآن مجاناً" : "ابدأ الفترة التجريبية"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Feature Comparison Matrix */}
@@ -203,6 +213,14 @@ const PricingPage: React.FC<PricingPageProps> = ({ onBookDemo }) => {
           </div>
         </div>
       </section>
+
+      <style>{`
+        @keyframes gradient-shift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
     </div>
   );
 };

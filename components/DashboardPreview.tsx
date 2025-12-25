@@ -40,6 +40,10 @@ import { useToast } from '../App';
 
 type VisMode = 'overview' | 'revenue' | 'crowd';
 
+interface DashboardPreviewProps {
+  isLive?: boolean;
+}
+
 const INITIAL_OVERVIEW_DATA = [
   { name: '10:00', actual: 400, forecast: 450 },
   { name: '12:00', actual: 600, forecast: 580 },
@@ -92,14 +96,21 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-const DashboardPreview: React.FC = () => {
+const DashboardPreview: React.FC<DashboardPreviewProps> = ({ isLive: externalIsLive }) => {
   const [visMode, setVisMode] = useState<VisMode>('overview');
   const [isActivating, setIsActivating] = useState(false);
   const [isDynamicActive, setIsDynamicActive] = useState(false);
-  const [isLive, setIsLive] = useState(false);
+  const [isLive, setIsLive] = useState(externalIsLive ?? false);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [overviewData, setOverviewData] = useState(INITIAL_OVERVIEW_DATA);
   const { addToast } = useToast();
+
+  // Sync internal isLive with external prop
+  useEffect(() => {
+    if (externalIsLive !== undefined) {
+      setIsLive(externalIsLive);
+    }
+  }, [externalIsLive]);
 
   // Simulate Live Data updates
   useEffect(() => {
@@ -113,6 +124,8 @@ const DashboardPreview: React.FC = () => {
           }))
         );
       }, 3000);
+    } else {
+      setOverviewData(INITIAL_OVERVIEW_DATA);
     }
     return () => clearInterval(interval);
   }, [isLive]);
@@ -132,8 +145,9 @@ const DashboardPreview: React.FC = () => {
   };
 
   const handleLiveToggle = () => {
+    // If external control exists, we might want to notify parent or just toggle local if allowed
     setIsLive(!isLive);
-    addToast(isLive ? 'تم إيقاف البث المباشر.' : 'تم تفعيل وضع البيانات الحية.', isLive ? 'info' : 'success');
+    addToast(!isLive ? 'تم تفعيل وضع البيانات الحية.' : 'تم إيقاف البث المباشر.', !isLive ? 'success' : 'info');
   };
 
   const stats = [
