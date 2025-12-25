@@ -157,6 +157,15 @@ interface ClickedSeatInfo {
   col: number;
 }
 
+interface HoveredSeatInfo {
+  seat: SeatData;
+  x: number;
+  y: number;
+  zoneName: string;
+  row: number;
+  col: number;
+}
+
 interface NotificationItem {
   id: number;
   title: string;
@@ -212,7 +221,7 @@ const KPICard: React.FC<{
   const isUp = change.includes('+');
 
   return (
-    <div className={`glass-card p-8 rounded-[48px] border flex flex-col group hover:border-white/10 transition-all duration-700 shadow-3xl relative overflow-hidden h-full cursor-default text-right ${highlight ? 'border-amber-gold/30 shadow-[0_0_40px_rgba(255,180,0,0.1)]' : 'border-white/5'}`}>
+    <div className={`glass-card p-8 rounded-[48px] border flex flex-col group hover:border-white/10 transition-all duration-700 shadow-3xl relative overflow-hidden h-full cursor-default text-right ${highlight ? 'border-amber-gold/30 shadow-[0_0_40px_rgba(255,0,0,0.1)]' : 'border-white/5'}`}>
       <div className="absolute inset-x-0 bottom-0 h-32 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
@@ -259,8 +268,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('الرئيسية');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [selectedZone, setSelectedZone] = useState<TheatreZone | null>(null);
   const [clickedSeat, setClickedSeat] = useState<ClickedSeatInfo | null>(null);
+  const [hoveredSeat, setHoveredSeat] = useState<HoveredSeatInfo | null>(null);
 
   const [isDynamicPricingActive, setIsDynamicPricingActive] = useState(false);
   const [isActivatingPricing, setIsActivatingPricing] = useState(false);
@@ -282,8 +291,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
 
   const [externalData, setExternalData] = useState<ExternalDataItem[]>([]);
   const [isFetchingExternal, setIsFetchingExternal] = useState(false);
-  const [isAutoPolling, setIsAutoPolling] = useState(false);
-
   const { addToast } = useToast();
 
   const handleToggleDynamicPricing = async () => {
@@ -298,25 +305,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
     setIsActivatingPricing(false);
     setIsDynamicPricingActive(true);
     addToast('تم تفعيل التسعير الديناميكي. الخوارزمية تراقب الطلب الآن.', 'success');
-  };
-
-  const handleFetchExternalData = async () => {
-    setIsFetchingExternal(true);
-    addToast('جاري استدعاء البيانات من المصدر الخارجي (API)...', 'info');
-    
-    try {
-      await new Promise(r => setTimeout(r, 1500));
-      const fallbackData: ExternalDataItem[] = [
-        { id: "API-910", name: "نظام التذاكر (GCP)", value: "2,482 Sales", status: "متصل", lastUpdated: "الآن" },
-        { id: "API-911", name: "حساسات البوابة الغربية", value: "94/min", status: "نشط", lastUpdated: "منذ دقيقتين" },
-        { id: "API-912", name: "رادار المشاعر (Edge)", value: "78% Happy", status: "نشط", lastUpdated: "الآن" },
-      ];
-      setExternalData(fallbackData);
-      addToast('تمت مزامنة البيانات الخارجية بنجاح.', 'success');
-      setActiveTab('تكامل البيانات');
-    } finally {
-      setIsFetchingExternal(false);
-    }
   };
 
   const menuItems = [
@@ -362,13 +350,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
     }
   };
 
+  const handleSeatHover = (seat: SeatData | null, e: React.MouseEvent | null, zoneName?: string, row?: number, col?: number) => {
+    if (!seat || !e || !zoneName || row === undefined || col === undefined) {
+      setHoveredSeat(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoveredSeat({
+      seat,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+      zoneName,
+      row,
+      col
+    });
+  };
+
   const SeatGrid: React.FC<{ 
     seats: SeatData[]; 
     cols: number; 
     size?: 'sm' | 'md'; 
     zoneName: string;
     onSeatClick?: (seat: SeatData, x: number, y: number, zoneName: string, row: number, col: number) => void;
-  }> = ({ seats, cols, size = 'md', zoneName, onSeatClick }) => {
+    onSeatHover?: (seat: SeatData | null, e: React.MouseEvent | null, zoneName?: string, row?: number, col?: number) => void;
+  }> = ({ seats, cols, size = 'md', zoneName, onSeatClick, onSeatHover }) => {
     return (
       <div className={`grid p-1 ${size === 'sm' ? 'gap-0.5' : 'gap-1.5'}`} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {seats.map((seat, index) => {
@@ -384,22 +389,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
           }
           
           const isSelected = clickedSeat?.seat.id === seat.id;
+          const isHovered = hoveredSeat?.seat.id === seat.id;
           const rowNum = Math.floor(index / cols) + 1;
           const colNum = (index % cols) + 1;
 
           return (
             <button 
               key={seat.id} 
+              onMouseEnter={(e) => onSeatHover?.(seat, e, zoneName, rowNum, colNum)}
+              onMouseLeave={() => onSeatHover?.(null, null)}
               onClick={(e) => {
                 e.stopPropagation();
                 if (onSeatClick) {
                   const rect = e.currentTarget.getBoundingClientRect();
-                  // For the global positioning to work with fixed coordinates:
                   onSeatClick(seat, rect.left + rect.width / 2, rect.top, zoneName, rowNum, colNum);
                 }
               }}
-              className={`${size === 'sm' ? 'w-1.5 h-1.5' : 'w-3 h-3 md:w-4 md:h-4'} rounded-full transition-all duration-700 ${colorClass} ${isSelected ? 'scale-[2.5] z-20 ring-2 ring-white shadow-[0_0_20px_rgba(255,255,255,0.8)] animate-pulse' : 'hover:scale-[1.8] hover:z-10'} active:scale-90 cursor-pointer focus:outline-none focus:ring-1 focus:ring-electric-teal`}
-            />
+              className={`${size === 'sm' ? 'w-1.5 h-1.5' : 'w-4 h-4 md:w-5 md:h-5'} rounded-full transition-all duration-300 ${colorClass} ${isSelected || isHovered ? 'scale-[1.8] z-20 ring-1 ring-white shadow-[0_0_15px_rgba(255,255,255,0.6)]' : 'hover:scale-[1.4] hover:z-10'} relative flex items-center justify-center cursor-pointer focus:outline-none focus:ring-1 focus:ring-electric-teal`}
+            >
+              {(isHovered || (size === 'md' && seat.heat > 0.85)) && (
+                <span className="text-[6px] md:text-[8px] font-black text-white absolute inset-0 flex items-center justify-center pointer-events-none drop-shadow-md">
+                  {Math.round(seat.heat * 100)}%
+                </span>
+              )}
+            </button>
           );
         })}
       </div>
@@ -420,16 +433,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
   const renderAudienceView = () => (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 text-right relative">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-9 glass-card p-8 md:p-12 rounded-[56px] border border-white/5 relative overflow-hidden group">
+        <div className="lg:col-span-12 glass-card p-8 md:p-12 rounded-[56px] border border-white/5 relative overflow-hidden group">
            <div className="flex items-center justify-between mb-12 flex-row-reverse relative z-10">
               <div className="text-right">
                 <h3 className="text-3xl font-black text-white font-plex">خريطة الإشغال والحرارة التفاعلية</h3>
-                <p className="text-gray-500 text-xs font-bold font-plex mt-1 uppercase tracking-widest">Real-time Seat Heatmap & Analysis</p>
+                <p className="text-gray-500 text-xs font-bold font-plex mt-1 uppercase tracking-widest">تحليل لحظي لكافة مقاعد المسرح بنسب مئوية دقيقة</p>
               </div>
               <div className="flex items-center gap-6">
                  <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">
                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest font-plex">Live Hall Sensors</span>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest font-plex">Live Sensors Syncing</span>
                  </div>
                  <div className="hidden sm:flex items-center gap-4 bg-black/20 px-6 py-2 rounded-full border border-white/5">
                     <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-600" /><span className="text-[9px] font-bold text-gray-500 font-plex">ذروة</span></div>
@@ -439,47 +452,40 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
               </div>
            </div>
 
-           <div className="relative bg-[#1E293B]/40 rounded-[48px] border border-white/5 p-8 md:p-16 aspect-[16/11] flex flex-col items-center justify-start overflow-hidden shadow-inner custom-scrollbar overflow-y-auto">
-              <div className="w-3/4 h-12 bg-gradient-to-b from-slate-700/40 to-transparent rounded-b-[80px] mb-16 relative flex items-center justify-center border-t border-slate-600/30 flex-shrink-0">
+           <div className="relative bg-[#1E293B]/40 rounded-[48px] border border-white/5 p-8 md:p-16 flex flex-col items-center justify-start overflow-hidden shadow-inner custom-scrollbar overflow-y-auto min-h-[700px]">
+              <div className="w-full h-12 bg-gradient-to-b from-slate-700/40 to-transparent rounded-b-[80px] mb-16 relative flex items-center justify-center border-t border-slate-600/30 flex-shrink-0">
                  <div className="absolute top-0 w-full h-px bg-electric-teal/40 blur-sm shadow-[0_0_20px_rgba(100,255,218,0.3)]" />
                  <span className="text-[12px] font-black text-slate-300 uppercase tracking-[1em] font-plex translate-y-[-2px]">THE STAGE / الخشبة</span>
               </div>
               
-              <div className="flex-1 w-full space-y-16 max-w-5xl">
-                 <div className="flex justify-between px-16">
+              <div className="flex-1 w-full space-y-16 max-w-6xl">
+                 <div className="flex justify-between px-4 md:px-20">
                     {theatreZones.slice(0, 2).map((zone) => (
-                      <div key={zone.id} className="p-4 rounded-3xl border border-white/5 bg-white/[0.02] flex flex-col items-center gap-3">
-                         <span className="text-[9px] font-black text-amber-gold font-plex uppercase tracking-widest">{zone.name}</span>
-                         <SeatGrid seats={zone.seats} cols={4} zoneName={zone.name} onSeatClick={handleSeatClick} />
+                      <div key={zone.id} className="p-6 rounded-[32px] border border-white/5 bg-white/[0.02] flex flex-col items-center gap-4 transition-all hover:bg-white/[0.05] group/box">
+                         <span className="text-[10px] font-black text-amber-gold font-plex uppercase tracking-widest group-hover/box:scale-110 transition-transform">{zone.name}</span>
+                         <SeatGrid seats={zone.seats} cols={4} zoneName={zone.name} onSeatClick={handleSeatClick} onSeatHover={handleSeatHover} />
                       </div>
                     ))}
                  </div>
-                 <div className="flex flex-col items-center gap-6">
-                    <div className="flex flex-col gap-4 w-full">
+                 <div className="flex flex-col items-center gap-8">
+                    <div className="flex flex-col gap-6 w-full">
                        {theatreZones.slice(2, 5).map((zone) => (
-                         <div key={zone.id} className="rounded-[40px] border border-white/5 bg-white/[0.01] flex flex-col items-center p-6 relative overflow-hidden">
-                            <span className="text-[10px] font-black text-slate-400 font-plex text-center mb-6 uppercase tracking-widest">{zone.name}</span>
-                            <SeatGrid seats={zone.seats} cols={zone.id === 'o1' ? 8 : zone.id === 'o2' ? 12 : 15} zoneName={zone.name} onSeatClick={handleSeatClick} />
+                         <div key={zone.id} className="rounded-[40px] border border-white/5 bg-white/[0.01] flex flex-col items-center p-8 relative overflow-hidden hover:bg-white/[0.03] transition-all">
+                            <div className="flex items-center justify-center gap-3 mb-6">
+                              <span className="text-[11px] font-black text-slate-400 font-plex uppercase tracking-widest">{zone.name}</span>
+                              <div className="px-2 py-0.5 bg-white/5 rounded-md border border-white/10 text-[9px] font-bold text-gray-500">{zone.occupancy}% Occupancy</div>
+                            </div>
+                            <SeatGrid 
+                              seats={zone.seats} 
+                              cols={zone.id === 'o1' ? 8 : zone.id === 'o2' ? 12 : 15} 
+                              zoneName={zone.name} 
+                              onSeatClick={handleSeatClick} 
+                              onSeatHover={handleSeatHover}
+                            />
                          </div>
                        ))}
                     </div>
                  </div>
-              </div>
-           </div>
-        </div>
-
-        <div className="lg:col-span-3 space-y-8">
-           <div className="p-10 bg-[#1E293B]/40 border border-white/5 rounded-[44px]">
-              <h4 className="text-xl font-black text-white font-plex mb-10">التركيبة الديموغرافية</h4>
-              <div className="h-[240px]">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <RePieChart>
-                       <Pie data={[{v:45, name: 'شباب'},{v:30, name: 'عائلات'},{v:25, name: 'سياح'}]} dataKey="v" innerRadius={70} outerRadius={90} paddingAngle={8}>
-                          <Cell fill="#64FFDA" /><Cell fill="#A78BFA" /><Cell fill="#FFB400" />
-                       </Pie>
-                       <Tooltip content={<CustomTooltip />} />
-                    </RePieChart>
-                 </ResponsiveContainer>
               </div>
            </div>
         </div>
@@ -565,7 +571,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
                 <div className="md:col-span-1 h-full"><KPICard label="معدل الإشغال اللحظي" val="88.4%" target="85.0%" change="+5.1%" icon={<Users className="w-7 h-7" />} themeColor="teal" data={sparklineData} /></div>
                 <div className="md:col-span-1 h-full"><KPICard label="دقة التنبؤ اللحظي" val="96.4%" target="94.0%" change="مستقر" icon={<Target className="w-7 h-7" />} themeColor="purple" data={sparklineData} /></div>
                 <div className="md:col-span-1 h-full"><KPICard label="حالة أمان النظام" val="محصن" target="Secure" change="Active" icon={<ShieldCheck className="w-7 h-7" />} themeColor="blue" data={sparklineData} /></div>
-                <div className="md:col-span-2 xl:col-span-1 glass-card p-10 rounded-[56px] border border-white/5 shadow-2xl relative overflow-hidden group/seats"><div className="flex items-center justify-between mb-8 flex-row-reverse relative z-10"><h4 className="text-lg font-black text-white font-plex">كثافة المقاعد</h4><Navigation2 className="w-5 h-5 text-electric-teal -rotate-45" /></div><div className="flex flex-col gap-6"><div className="bg-black/20 rounded-[32px] p-4 flex flex-col items-center justify-center border border-white/5"><div className="w-full h-4 bg-slate-700/30 rounded-b-2xl mb-6 flex items-center justify-center"><span className="text-[7px] text-slate-500 font-black tracking-[0.5em] uppercase font-plex">Stage</span></div><div className="flex flex-col gap-2 scale-90 origin-top"><div className="flex justify-between w-full gap-4"><SeatGrid seats={theatreZones[0].seats} cols={4} size="sm" zoneName={theatreZones[0].name} onSeatClick={handleSeatClick} /><SeatGrid seats={theatreZones[1].seats} cols={4} size="sm" zoneName={theatreZones[1].name} onSeatClick={handleSeatClick} /></div><SeatGrid seats={theatreZones[2].seats} cols={8} size="sm" zoneName={theatreZones[2].name} onSeatClick={handleSeatClick} /><SeatGrid seats={theatreZones[3].seats} cols={12} size="sm" zoneName={theatreZones[3].name} onSeatClick={handleSeatClick} /></div></div><button onClick={() => setActiveTab('الجمهور')} className="w-full py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-gray-400 hover:text-white hover:bg-white/10 transition-all font-plex">عرض الخريطة الكاملة</button></div></div>
+                <div className="md:col-span-2 xl:col-span-1 glass-card p-10 rounded-[56px] border border-white/5 shadow-2xl relative overflow-hidden group/seats"><div className="flex items-center justify-between mb-8 flex-row-reverse relative z-10"><h4 className="text-lg font-black text-white font-plex">كثافة المقاعد</h4><Navigation2 className="w-5 h-5 text-electric-teal -rotate-45" /></div><div className="flex flex-col gap-6"><div className="bg-black/20 rounded-[32px] p-4 flex flex-col items-center justify-center border border-white/5"><div className="w-full h-4 bg-slate-700/30 rounded-b-2xl mb-6 flex items-center justify-center"><span className="text-[7px] text-slate-500 font-black tracking-[0.5em] uppercase font-plex">Stage</span></div><div className="flex flex-col gap-2 scale-90 origin-top"><div className="flex justify-between w-full gap-4"><SeatGrid seats={theatreZones[0].seats} cols={4} size="sm" zoneName={theatreZones[0].name} onSeatClick={handleSeatClick} onSeatHover={handleSeatHover} /><SeatGrid seats={theatreZones[1].seats} cols={4} size="sm" zoneName={theatreZones[1].name} onSeatClick={handleSeatClick} onSeatHover={handleSeatHover} /></div><SeatGrid seats={theatreZones[2].seats} cols={8} size="sm" zoneName={theatreZones[2].name} onSeatClick={handleSeatClick} onSeatHover={handleSeatHover} /><SeatGrid seats={theatreZones[3].seats} cols={12} size="sm" zoneName={theatreZones[3].name} onSeatClick={handleSeatClick} onSeatHover={handleSeatHover} /></div></div><button onClick={() => setActiveTab('الجمهور')} className="w-full py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-gray-400 hover:text-white hover:bg-white/10 transition-all font-plex">عرض الخريطة الكاملة</button></div></div>
                 <div className="md:col-span-2 xl:col-span-3 glass-card p-10 rounded-[56px] border border-white/5 shadow-3xl text-right relative overflow-hidden"><div className="flex items-center justify-between mb-12 flex-row relative z-10"><div className="bg-electric-teal/10 px-4 py-2 rounded-xl border border-electric-teal/20 text-electric-teal flex items-center gap-2"><div className="w-2 h-2 bg-electric-teal rounded-full animate-pulse shadow-[0_0_8px_rgba(100,255,218,0.5)]" /><span className="text-[10px] font-black uppercase tracking-widest font-plex">AI Monitoring Live</span></div><h3 className="text-2xl font-black text-white font-plex tracking-tight">لوحة المؤشرات التشغيلية</h3></div><DashboardPreview /></div>
               </div>
             ) : activeTab === 'الجمهور' ? (
@@ -580,7 +586,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
               </div>
             )}
 
-            {/* SEAT INSPECTOR TOOLTIP - Enhanced with context and stopPropagation */}
+            {/* HOVER TOOLTIP - New functionality */}
+            {hoveredSeat && !clickedSeat && (
+              <div 
+                className="fixed z-[110] -translate-x-1/2 -translate-y-[110%] pointer-events-none animate-in fade-in zoom-in-95 duration-200"
+                style={{ left: hoveredSeat.x, top: hoveredSeat.y }}
+              >
+                <div className="bg-[#0A192F]/98 border border-white/30 p-4 rounded-2xl shadow-2xl backdrop-blur-xl text-right min-w-[200px]">
+                  <div className="flex items-center justify-between mb-2 flex-row-reverse border-b border-white/10 pb-2">
+                    <span className="text-[9px] font-black text-electric-teal font-plex uppercase tracking-widest">{hoveredSeat.zoneName}</span>
+                    <span className="text-xs font-black text-white font-plex">صف {hoveredSeat.row}، مقعد {hoveredSeat.col}</span>
+                  </div>
+                  <div className="flex items-center justify-between flex-row-reverse mb-2">
+                    <span className="text-[9px] text-gray-500 font-bold font-plex">الحالة</span>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${hoveredSeat.seat.status === 'booked' ? 'text-red-400 bg-red-400/10' : 'text-emerald-400 bg-emerald-400/10'}`}>
+                      {hoveredSeat.seat.status === 'booked' ? 'محجوز' : 'متاح'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between flex-row-reverse">
+                    <span className="text-[9px] text-gray-500 font-bold font-plex">كثافة الطلب</span>
+                    <span className="text-xs font-black text-amber-gold font-plex">{Math.round(hoveredSeat.seat.heat * 100)}%</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SEAT INSPECTOR TOOLTIP - Click state */}
             {clickedSeat && (
               <div 
                 className="fixed z-[100] -translate-x-1/2 -translate-y-[115%] mb-4 animate-in zoom-in-95 duration-200 pointer-events-none"
@@ -588,49 +619,49 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
               >
                 <div 
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#0A192F]/95 backdrop-blur-3xl border border-white/20 p-6 rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.8)] min-w-[280px] text-right pointer-events-auto border-b-electric-teal/40 border-b-4 relative"
+                  className="bg-[#0A192F]/95 backdrop-blur-3xl border border-white/20 p-6 rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.8)] min-w-[320px] text-right pointer-events-auto border-b-electric-teal/40 border-b-4 relative"
                 >
                   <div className="flex items-center justify-between mb-5 flex-row-reverse border-b border-white/10 pb-4">
                     <div className="flex flex-col items-end">
                       <h5 className="text-[10px] font-black text-gray-500 uppercase tracking-widest font-plex leading-none mb-1">{clickedSeat.zoneName}</h5>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-lg font-black text-white font-plex">صف {clickedSeat.row}</span>
+                        <span className="text-xl font-black text-white font-plex">صف {clickedSeat.row}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-700" />
-                        <span className="text-lg font-black text-electric-teal font-plex">مقعد {clickedSeat.col}</span>
+                        <span className="text-xl font-black text-electric-teal font-plex">مقعد {clickedSeat.col}</span>
                       </div>
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setClickedSeat(null); }}
-                      className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-gray-500 hover:text-white transition-colors"
+                      className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-gray-500 hover:text-white transition-all active:scale-90"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
                   
                   <div className="space-y-6">
-                      <div className="flex items-center justify-between flex-row-reverse bg-white/[0.02] p-3 rounded-2xl border border-white/5">
+                      <div className="flex items-center justify-between flex-row-reverse bg-white/[0.02] p-4 rounded-2xl border border-white/5">
                         <span className="text-[10px] text-gray-400 font-bold font-plex">الحالة التشغيلية</span>
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border flex items-center gap-2 ${clickedSeat.seat.status === 'booked' ? 'text-red-400 bg-red-400/10 border-red-400/20' : clickedSeat.seat.status === 'premium' ? 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20' : 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'}`}>
+                          <span className={`text-[11px] font-black px-3 py-1.5 rounded-xl border flex items-center gap-2 ${clickedSeat.seat.status === 'booked' ? 'text-red-400 bg-red-400/10 border-red-400/20' : clickedSeat.seat.status === 'premium' ? 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20' : 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'}`}>
                             {clickedSeat.seat.status === 'booked' ? 'محجوز' : clickedSeat.seat.status === 'premium' ? 'مقعد مميز' : 'متاح'}
                             {clickedSeat.seat.status === 'booked' ? <Lock className="w-3 h-3" /> : clickedSeat.seat.status === 'premium' ? <Star className="w-3 h-3 fill-current" /> : <CheckCircle2 className="w-3 h-3" />}
                           </span>
                         </div>
                       </div>
 
-                      <div className="space-y-2 px-1">
+                      <div className="space-y-3 px-1">
                         <div className="flex items-center justify-between flex-row-reverse">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-gray-400 font-bold font-plex">مؤشر الطلب (Demand)</span>
-                            <Flame className={`w-3 h-3 ${clickedSeat.seat.heat > 0.7 ? 'text-red-500 animate-pulse' : 'text-gray-500'}`} />
+                            <span className="text-[10px] text-gray-400 font-bold font-plex">مؤشر الإشغال / الحرارة</span>
+                            <Flame className={`w-4 h-4 ${clickedSeat.seat.heat > 0.7 ? 'text-red-500 animate-pulse' : 'text-gray-500'}`} />
                           </div>
-                          <span className={`text-xs font-black font-plex ${clickedSeat.seat.heat > 0.8 ? 'text-red-500' : clickedSeat.seat.heat > 0.4 ? 'text-amber-gold' : 'text-electric-teal'}`}>
+                          <span className={`text-sm font-black font-plex ${clickedSeat.seat.heat > 0.8 ? 'text-red-500' : clickedSeat.seat.heat > 0.4 ? 'text-amber-gold' : 'text-electric-teal'}`}>
                             {Math.round(clickedSeat.seat.heat * 100)}%
                           </span>
                         </div>
-                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
                            <div 
-                            className={`h-full transition-all duration-1000 ${clickedSeat.seat.heat > 0.8 ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : clickedSeat.seat.heat > 0.4 ? 'bg-amber-gold shadow-[0_0_10px_rgba(255,180,0,0.5)]' : 'bg-electric-teal shadow-[0_0_10px_rgba(100,255,218,0.5)]'}`} 
+                            className={`h-full transition-all duration-1000 ${clickedSeat.seat.heat > 0.8 ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : clickedSeat.seat.heat > 0.4 ? 'bg-amber-gold shadow-[0_0_15px_rgba(255,180,0,0.5)]' : 'bg-electric-teal shadow-[0_0_15px_rgba(100,255,218,0.5)]'}`} 
                             style={{ width: `${clickedSeat.seat.heat * 100}%` }} 
                            />
                         </div>
@@ -639,30 +670,30 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onLogout }) => {
                       <div className="pt-2">
                         <div className="bg-amber-gold/5 border border-amber-gold/10 p-4 rounded-2xl">
                           <div className="flex items-center gap-2 justify-end mb-2">
-                            <span className="text-[9px] font-black text-amber-gold font-plex uppercase tracking-widest">تحليل الذكاء الاصطناعي</span>
-                            <BrainCircuit className="w-3.5 h-3.5 text-amber-gold" />
+                            <span className="text-[9px] font-black text-amber-gold font-plex uppercase tracking-widest">توقعات العقل الصناعي</span>
+                            <BrainCircuit className="w-4 h-4 text-amber-gold" />
                           </div>
-                          <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
+                          <p className="text-[12px] text-gray-400 leading-relaxed font-medium">
                             {clickedSeat.seat.status === 'booked' 
-                              ? 'تم حجز المقعد لعميل مخلص. العائد التشغيلي المحقق مستدام.' 
-                              : clickedSeat.seat.heat > 0.6 
-                                ? 'يتوقع النظام حجز هذا المقعد بنسبة 85% خلال الساعة القادمة.' 
-                                : 'كثافة الطلب منخفضة حالياً لهذا الموقع. يُنصح بالانتظار.'}
+                              ? 'المقعد محجوز ضمن فئة الحجز المبكر. العميل يظهر اهتماماً عالياً بالمشاهد الدرامية.' 
+                              : clickedSeat.seat.heat > 0.7 
+                                ? 'منطقة مرتفعة الطلب. يُتوقع حجز هذا المقعد بنسبة 92% خلال الدقائق الـ 15 القادمة.' 
+                                : 'معدل الطلب منخفض حالياً. نقترح تحفيز المنطقة عبر التسعير المرن.'}
                           </p>
                         </div>
                       </div>
 
-                      <div className="pt-2 flex items-center justify-between flex-row-reverse">
+                      <div className="pt-4 flex items-center justify-between flex-row-reverse border-t border-white/5">
                          <div className="text-right">
-                           <p className="text-[9px] text-gray-500 font-bold font-plex">السعر المقترح</p>
-                           <p className="text-2xl font-black text-white font-plex tracking-tight">${Math.round(50 + clickedSeat.seat.heat * 100)}</p>
+                           <p className="text-[10px] text-gray-500 font-bold font-plex uppercase tracking-widest mb-1">السعر اللحظي</p>
+                           <p className="text-3xl font-black text-white font-plex tracking-tight">${Math.round(50 + clickedSeat.seat.heat * 150)}</p>
                          </div>
                          <div className="flex gap-2">
-                           <button className="px-5 py-3 bg-white text-[#0A192F] font-black text-[11px] rounded-xl transition-all hover:shadow-[0_10px_20px_rgba(255,255,255,0.2)] active:scale-95 font-plex">تعديل الفئة</button>
+                           <button className="px-6 py-4 bg-white text-[#0A192F] font-black text-xs rounded-2xl transition-all hover:shadow-[0_15px_30px_rgba(255,255,255,0.2)] active:scale-95 font-plex">تحديث السعر</button>
                          </div>
                       </div>
                   </div>
-                  <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-electric-teal/40" />
+                  <div className="absolute bottom-[-12px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[12px] border-t-electric-teal/40" />
                 </div>
               </div>
             )}

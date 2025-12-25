@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Brain, Twitter, Linkedin, Github } from 'lucide-react';
+import { Twitter, Linkedin, Github } from 'lucide-react';
 import { ViewType } from '../App';
+import Logo from './Logo';
 
 interface FooterProps {
   onNavigate?: (view: ViewType) => void;
@@ -15,11 +16,9 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div className="col-span-1 md:col-span-1">
             <button 
               onClick={() => onNavigate?.('home')}
-              className="flex items-center gap-2 mb-6 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-4 mb-6 hover:opacity-80 transition-opacity"
             >
-              <div className="p-2 bg-electric-teal/10 rounded-xl">
-                <Brain className="text-electric-teal w-8 h-8" />
-              </div>
+              <Logo size="sm" />
               <span className="text-2xl font-black text-white">StageMind AI</span>
             </button>
             <p className="text-gray-400 leading-relaxed mb-8">

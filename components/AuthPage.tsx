@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { Brain, ArrowRight, Mail, Lock, Building2, User, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowRight, Mail, Lock, Building2, User, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import Logo from './Logo';
 
 interface AuthPageProps {
   mode: 'login' | 'signup';
@@ -35,7 +36,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode, onSwitch, onBack, onLoginSucc
     if (!validate()) return;
 
     setIsLoading(true);
-    // محاكاة الاتصال والتحقق من البيانات
     await new Promise(r => setTimeout(r, 1500)); 
     setIsLoading(false);
     onLoginSuccess();
@@ -45,7 +45,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode, onSwitch, onBack, onLoginSucc
     <div className="min-h-screen grid lg:grid-cols-2 bg-[#0A192F] animate-in fade-in duration-500">
       {/* Form Section */}
       <div className="flex items-center justify-center p-8 md:p-12 order-2 lg:order-1 relative overflow-hidden">
-        {/* Decorative elements */}
         <div className="absolute top-[-10%] left-[-10%] w-[300px] h-[300px] bg-electric-teal/5 rounded-full blur-[80px]" />
         
         <div className="w-full max-w-md relative z-10 text-right">
@@ -58,11 +57,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode, onSwitch, onBack, onLoginSucc
           </button>
 
           <div className="mb-10">
-            <div className="flex items-center gap-3 mb-6 justify-end">
+            <div className="flex items-center gap-4 mb-6 justify-end">
               <h1 className="text-2xl font-black">StageMind <span className="text-electric-teal">AI</span></h1>
-              <div className="bg-electric-teal/10 p-3 rounded-2xl">
-                <Brain className="text-electric-teal w-8 h-8" />
-              </div>
+              <Logo size="md" />
             </div>
             <h2 className="text-3xl font-black mb-2">
               {mode === 'login' ? 'دخول الأعضاء' : 'إنشاء حساب جديد'}
@@ -185,18 +182,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode, onSwitch, onBack, onLoginSucc
                — مهندس تشغيل، أوبرا دبي
              </footer>
            </blockquote>
-           
-           <div className="mt-20 flex gap-8 flex-row-reverse">
-              <div className="text-right">
-                <p className="text-3xl font-black text-white">99.9%</p>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">وقت التشغيل</p>
-              </div>
-              <div className="w-px h-12 bg-slate-800" />
-              <div className="text-right">
-                <p className="text-3xl font-black text-white">256-bit</p>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">تشفير البيانات</p>
-              </div>
-           </div>
         </div>
       </div>
     </div>

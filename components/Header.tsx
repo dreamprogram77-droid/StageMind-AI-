@@ -1,7 +1,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Brain, Activity, Menu, X, Radio, Search, Command, Package, Lightbulb, Zap, DollarSign, Share2, Ticket } from 'lucide-react';
+import { Activity, Menu, X, Radio, Search, Command, Package, Lightbulb, Zap, DollarSign, Share2, Ticket } from 'lucide-react';
 import { ViewType, useToast } from '../App';
+import Logo from './Logo';
 
 interface HeaderProps {
   onBookDemo: () => void;
@@ -98,10 +99,7 @@ const Header: React.FC<HeaderProps> = ({ onBookDemo, onNavigate, currentView }) 
             onClick={() => handleNavClick('home')}
             className="flex items-center gap-4 group"
           >
-            <div className={`p-3 rounded-[22px] transition-all duration-500 ${isScrolled ? 'bg-indigo-500/10' : 'bg-indigo-500/20'} group-hover:scale-110 group-hover:bg-indigo-500/30 shadow-lg group-hover:shadow-indigo-500/30 border border-white/5 relative overflow-hidden`}>
-              <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              <Brain className="text-indigo-400 w-8 h-8 relative z-10" />
-            </div>
+            <Logo size={isScrolled ? 'md' : 'lg'} />
             <div className="flex flex-col items-start justify-center hidden sm:flex">
               <div className="flex items-center gap-3">
                 <span className="text-2xl md:text-3xl font-black tracking-tighter text-white font-plex">StageMind</span>
@@ -134,7 +132,6 @@ const Header: React.FC<HeaderProps> = ({ onBookDemo, onNavigate, currentView }) 
             </button>
           ))}
           
-          {/* View Show Details Button */}
           <button 
             onClick={handleShowDetails}
             className="flex items-center gap-2 px-5 py-2.5 bg-electric-teal/10 text-electric-teal text-xs font-black rounded-xl border border-electric-teal/20 hover:bg-electric-teal/20 transition-all font-plex group shadow-lg active:scale-95"
@@ -144,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({ onBookDemo, onNavigate, currentView }) 
           </button>
         </nav>
 
-        {/* Search Bar - Center/Right Integration */}
+        {/* Search Bar */}
         <div className="flex-1 max-w-lg hidden lg:block mx-4">
           <div className="flex items-center gap-3">
             <form onSubmit={handleSearchSubmit} className="relative group flex-1">
@@ -164,15 +161,6 @@ const Header: React.FC<HeaderProps> = ({ onBookDemo, onNavigate, currentView }) 
                 <Command className="w-3 h-3 text-gray-400" />
                 <span className="text-[10px] font-black text-gray-400 font-plex">K</span>
               </div>
-              {searchQuery && (
-                <button 
-                  type="button" 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute left-10 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
-                >
-                  <X className="w-3 h-3 text-gray-400" />
-                </button>
-              )}
             </form>
             <button 
               onClick={handleShare}
@@ -215,7 +203,6 @@ const Header: React.FC<HeaderProps> = ({ onBookDemo, onNavigate, currentView }) 
       {isMobileMenuOpen && (
         <div className="fixed inset-0 top-[70px] bg-[#0A192F]/98 backdrop-blur-3xl z-[200] md:hidden animate-in fade-in slide-in-from-top-4 duration-500 overflow-y-auto">
            <div className="p-8 flex flex-col gap-8 text-right">
-              {/* Mobile Search & Share */}
               <div className="flex items-center gap-3 lg:hidden">
                 <form onSubmit={handleSearchSubmit} className="relative group flex-1">
                   <div className="absolute inset-0 bg-white/5 rounded-2xl border border-white/10" />
@@ -245,20 +232,10 @@ const Header: React.FC<HeaderProps> = ({ onBookDemo, onNavigate, currentView }) 
                   >
                     <span>{item.label}</span>
                     <span className={`${currentView === item.view ? 'text-indigo-400' : 'text-gray-500'}`}>
-                      {/* Fix: Cast item.icon to React.ReactElement<any> to allow className prop in cloneElement */}
                       {React.cloneElement(item.icon as React.ReactElement<any>, { className: "w-8 h-8" })}
                     </span>
                   </button>
                 ))}
-                
-                {/* Mobile Current Show Details Button */}
-                <button 
-                  onClick={() => { handleShowDetails(); setIsMobileMenuOpen(false); }}
-                  className="flex items-center justify-end gap-4 text-3xl font-black font-plex text-electric-teal transition-colors"
-                >
-                  <span>العرض الحالي</span>
-                  <Ticket className="w-8 h-8" />
-                </button>
               </div>
               
               <div className="h-px bg-white/5 my-4" />

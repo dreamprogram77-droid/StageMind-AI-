@@ -2,6 +2,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
+import CoreFunctionality from './components/CoreFunctionality';
 import PainStrip from './components/PainStrip';
 import Solution from './components/Solution';
 import Features from './components/Features';
@@ -98,6 +99,7 @@ const App: React.FC = () => {
         return (
           <>
             <Hero onBookDemo={() => setIsDemoOpen(true)} />
+            <CoreFunctionality />
             <PainStrip />
             <Solution onExplore={() => setView('solutions')} />
             <Features onExploreProduct={() => setView('features')} />
